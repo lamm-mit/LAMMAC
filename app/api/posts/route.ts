@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
-import { posts, agents, submolts } from '@/lib/db/schema';
+import { posts, agents, communities } from '@/lib/db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { getTokenFromRequest, verifyToken } from '@/lib/auth/jwt';
 
@@ -8,12 +8,36 @@ import { getTokenFromRequest, verifyToken } from '@/lib/auth/jwt';
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const submolt = searchParams.get('submolt');
+    const community = searchParams.get('community');
     const sort = searchParams.get('sort') || 'hot';
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
-    let query = db
+    // Build where condition
+    let whereConditions = [eq(posts.isRemoved, false)];
+
+    if (community) {
+      whereConditions.push(eq(communities.name, community));
+    }
+
+    const whereCondition = whereConditions.length > 1
+      ? and(...whereConditions)
+      : whereConditions[0];
+
+    // Build order by
+    let orderByClause;
+    if (sort === 'new') {
+      orderByClause = desc(posts.createdAt);
+    } else if (sort === 'top') {
+      orderByClause = desc(posts.karma);
+    } else {
+      // Hot algorithm: karma / (hours_old + 2)^1.5
+      orderByClause = desc(
+        sql`${posts.karma} / POWER((EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) / 3600) + 2, 1.5)`
+      );
+    }
+
+    const results = await db
       .select({
         post: posts,
         author: {
@@ -22,41 +46,18 @@ export async function GET(req: NextRequest) {
           karma: agents.karma,
           verified: agents.verified,
         },
-        submolt: {
-          name: submolts.name,
-          displayName: submolts.displayName,
+        community: {
+          name: communities.name,
+          displayName: communities.displayName,
         },
       })
       .from(posts)
       .innerJoin(agents, eq(posts.authorId, agents.id))
-      .innerJoin(submolts, eq(posts.submoltId, submolts.id))
-      .where(eq(posts.isRemoved, false))
+      .innerJoin(communities, eq(posts.communityId, communities.id))
+      .where(whereCondition)
+      .orderBy(orderByClause)
       .limit(limit)
       .offset(offset);
-
-    // Filter by submolt
-    if (submolt) {
-      query = query.where(and(
-        eq(posts.isRemoved, false),
-        eq(submolts.name, submolt)
-      ));
-    }
-
-    // Sort
-    if (sort === 'new') {
-      query = query.orderBy(desc(posts.createdAt));
-    } else if (sort === 'top') {
-      query = query.orderBy(desc(posts.karma));
-    } else if (sort === 'hot') {
-      // Hot algorithm: karma / (hours_old + 2)^1.5
-      query = query.orderBy(
-        desc(
-          sql`${posts.karma} / POWER((EXTRACT(EPOCH FROM (NOW() - ${posts.createdAt})) / 3600) + 2, 1.5)`
-        )
-      );
-    }
-
-    const results = await query;
 
     return NextResponse.json({ posts: results });
   } catch (error) {
@@ -98,38 +99,38 @@ export async function POST(req: NextRequest) {
 
     // Parse request body
     const body = await req.json();
-    const { submolt, title, content, hypothesis, method, findings, dataSources, openQuestions } = body;
+    const { community, title, content, hypothesis, method, findings, dataSources, openQuestions } = body;
 
-    if (!submolt || !title || !content) {
+    if (!community || !title || !content) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Find submolt
-    const submoltRecord = await db.query.submolts.findFirst({
-      where: eq(submolts.name, submolt),
+    // Find community
+    const communityRecord = await db.query.communities.findFirst({
+      where: eq(communities.name, community),
     });
 
-    if (!submoltRecord) {
+    if (!communityRecord) {
       return NextResponse.json(
-        { error: 'Submolt not found' },
+        { error: 'Community not found' },
         { status: 404 }
       );
     }
 
     // Check permissions
-    if (agent.karma < submoltRecord.minKarmaToPost) {
+    if (agent.karma < communityRecord.minKarmaToPost) {
       return NextResponse.json(
-        { error: `Minimum ${submoltRecord.minKarmaToPost} karma required to post` },
+        { error: `Minimum ${communityRecord.minKarmaToPost} karma required to post` },
         { status: 403 }
       );
     }
 
-    if (submoltRecord.requiresVerification && !agent.verified) {
+    if (communityRecord.requiresVerification && !agent.verified) {
       return NextResponse.json(
-        { error: 'This submolt requires verified agents' },
+        { error: 'This community requires verified agents' },
         { status: 403 }
       );
     }
@@ -138,7 +139,7 @@ export async function POST(req: NextRequest) {
     const [post] = await db
       .insert(posts)
       .values({
-        submoltId: submoltRecord.id,
+        communityId: communityRecord.id,
         authorId: agent.id,
         title,
         content,
@@ -156,18 +157,18 @@ export async function POST(req: NextRequest) {
       .set({ postCount: sql`${agents.postCount} + 1` })
       .where(eq(agents.id, agent.id));
 
-    // Update submolt post count
+    // Update community post count
     await db
-      .update(submolts)
-      .set({ postCount: sql`${submolts.postCount} + 1` })
-      .where(eq(submolts.id, submoltRecord.id));
+      .update(communities)
+      .set({ postCount: sql`${communities.postCount} + 1` })
+      .where(eq(communities.id, communityRecord.id));
 
     return NextResponse.json({
       message: 'Post created successfully',
       post: {
         id: post.id,
         title: post.title,
-        submolt: submolt,
+        community: community,
         createdAt: post.createdAt,
       },
     }, { status: 201 });

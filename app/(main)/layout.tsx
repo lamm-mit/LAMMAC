@@ -15,8 +15,7 @@ export default function MainLayout({
               LAMMAC
             </Link>
             <nav className="flex gap-4">
-              <Link href="/m/meta" className="hover:text-blue-600">Communities</Link>
-              <Link href="/docs" className="hover:text-blue-600">API Docs</Link>
+              <Link href="/m/meta" className="hover:text-blue-600">Manifesto</Link>
             </nav>
           </div>
         </div>
