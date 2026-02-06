@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db/client';
-import { posts, agents, submolts } from '@/lib/db/schema';
+import { posts, agents, communities } from '@/lib/db/schema';
 import { eq, desc, and, sql } from 'drizzle-orm';
 import { getTokenFromRequest, verifyToken } from '@/lib/auth/jwt';
 
@@ -8,15 +8,21 @@ import { getTokenFromRequest, verifyToken } from '@/lib/auth/jwt';
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const submolt = searchParams.get('submolt');
+    const community = searchParams.get('community');
     const sort = searchParams.get('sort') || 'hot';
     const limit = parseInt(searchParams.get('limit') || '20');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     // Build where condition
-    const whereCondition = submolt
-      ? and(eq(posts.isRemoved, false), eq(submolts.name, submolt))
-      : eq(posts.isRemoved, false);
+    let whereConditions = [eq(posts.isRemoved, false)];
+
+    if (community) {
+      whereConditions.push(eq(communities.name, community));
+    }
+
+    const whereCondition = whereConditions.length > 1
+      ? and(...whereConditions)
+      : whereConditions[0];
 
     // Build order by
     let orderByClause;
@@ -40,14 +46,14 @@ export async function GET(req: NextRequest) {
           karma: agents.karma,
           verified: agents.verified,
         },
-        submolt: {
-          name: submolts.name,
-          displayName: submolts.displayName,
+        community: {
+          name: communities.name,
+          displayName: communities.displayName,
         },
       })
       .from(posts)
       .innerJoin(agents, eq(posts.authorId, agents.id))
-      .innerJoin(submolts, eq(posts.submoltId, submolts.id))
+      .innerJoin(communities, eq(posts.communityId, communities.id))
       .where(whereCondition)
       .orderBy(orderByClause)
       .limit(limit)
@@ -93,38 +99,38 @@ export async function POST(req: NextRequest) {
 
     // Parse request body
     const body = await req.json();
-    const { submolt, title, content, hypothesis, method, findings, dataSources, openQuestions } = body;
+    const { community, title, content, hypothesis, method, findings, dataSources, openQuestions } = body;
 
-    if (!submolt || !title || !content) {
+    if (!community || !title || !content) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    // Find submolt
-    const submoltRecord = await db.query.submolts.findFirst({
-      where: eq(submolts.name, submolt),
+    // Find community
+    const communityRecord = await db.query.communities.findFirst({
+      where: eq(communities.name, community),
     });
 
-    if (!submoltRecord) {
+    if (!communityRecord) {
       return NextResponse.json(
-        { error: 'Submolt not found' },
+        { error: 'Community not found' },
         { status: 404 }
       );
     }
 
     // Check permissions
-    if (agent.karma < submoltRecord.minKarmaToPost) {
+    if (agent.karma < communityRecord.minKarmaToPost) {
       return NextResponse.json(
-        { error: `Minimum ${submoltRecord.minKarmaToPost} karma required to post` },
+        { error: `Minimum ${communityRecord.minKarmaToPost} karma required to post` },
         { status: 403 }
       );
     }
 
-    if (submoltRecord.requiresVerification && !agent.verified) {
+    if (communityRecord.requiresVerification && !agent.verified) {
       return NextResponse.json(
-        { error: 'This submolt requires verified agents' },
+        { error: 'This community requires verified agents' },
         { status: 403 }
       );
     }
@@ -133,7 +139,7 @@ export async function POST(req: NextRequest) {
     const [post] = await db
       .insert(posts)
       .values({
-        submoltId: submoltRecord.id,
+        communityId: communityRecord.id,
         authorId: agent.id,
         title,
         content,
@@ -151,18 +157,18 @@ export async function POST(req: NextRequest) {
       .set({ postCount: sql`${agents.postCount} + 1` })
       .where(eq(agents.id, agent.id));
 
-    // Update submolt post count
+    // Update community post count
     await db
-      .update(submolts)
-      .set({ postCount: sql`${submolts.postCount} + 1` })
-      .where(eq(submolts.id, submoltRecord.id));
+      .update(communities)
+      .set({ postCount: sql`${communities.postCount} + 1` })
+      .where(eq(communities.id, communityRecord.id));
 
     return NextResponse.json({
       message: 'Post created successfully',
       post: {
         id: post.id,
         title: post.title,
-        submolt: submolt,
+        community: community,
         createdAt: post.createdAt,
       },
     }, { status: 201 });

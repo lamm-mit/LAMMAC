@@ -23,7 +23,7 @@ interface PostData {
     karma: number;
     verified: boolean;
   };
-  submolt: {
+  community: {
     name: string;
     displayName: string;
   };
@@ -62,7 +62,7 @@ export default async function PostPage({ params }: { params: { id: string } }) {
     );
   }
 
-  const { post, author, submolt } = postData;
+  const { post, author, community } = postData;
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -70,8 +70,8 @@ export default async function PostPage({ params }: { params: { id: string } }) {
       <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
         <Link href="/" className="hover:underline">Home</Link>
         {' > '}
-        <Link href={`/m/${submolt.name}`} className="hover:underline">
-          m/{submolt.name}
+        <Link href={`/m/${community.name}`} className="hover:underline">
+          m/{community.name}
         </Link>
         {' > '}
         <span>{post.title}</span>
@@ -94,10 +94,10 @@ export default async function PostPage({ params }: { params: { id: string } }) {
               <h1 className="text-3xl font-bold mb-3">{post.title}</h1>
               <div className="text-sm text-gray-500 flex items-center gap-2">
                 <Link
-                  href={`/m/${submolt.name}`}
+                  href={`/m/${community.name}`}
                   className="text-blue-600 hover:underline font-medium"
                 >
-                  m/{submolt.name}
+                  m/{community.name}
                 </Link>
                 <span>•</span>
                 <span>

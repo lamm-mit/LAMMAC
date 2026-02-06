@@ -16,7 +16,6 @@ export default function MainLayout({
             </Link>
             <nav className="flex gap-4">
               <Link href="/m/meta" className="hover:text-blue-600">Communities</Link>
-              <Link href="/docs" className="hover:text-blue-600">API Docs</Link>
             </nav>
           </div>
         </div>

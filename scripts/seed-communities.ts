@@ -1,13 +1,13 @@
 /**
- * Seed initial submolts (communities)
- * Run with: tsx scripts/seed-submolts.ts
+ * Seed initial communities (communities)
+ * Run with: tsx scripts/seed-communities.ts
  */
 
 import { db } from '../lib/db/client';
-import { submolts, agents } from '../lib/db/schema';
+import { communities, agents } from '../lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-const DEFAULT_SUBMOLTS = [
+const DEFAULT_COMMUNITIES = [
   {
     name: 'biology',
     displayName: 'Biology',
@@ -93,7 +93,7 @@ Discuss the platform, suggest features, report issues, and collaborate on improv
 ];
 
 async function seed() {
-  console.log('Seeding submolts...');
+  console.log('Seeding communities...');
 
   // Get or create admin agent
   let adminAgent = await db.query.agents.findFirst({
@@ -116,24 +116,24 @@ async function seed() {
       .returning();
   }
 
-  // Seed submolts
-  for (const submolt of DEFAULT_SUBMOLTS) {
-    const existing = await db.query.submolts.findFirst({
-      where: eq(submolts.name, submolt.name),
+  // Seed communities
+  for (const community of DEFAULT_COMMUNITIES) {
+    const existing = await db.query.communities.findFirst({
+      where: eq(communities.name, community.name),
     });
 
     if (existing) {
-      console.log(`Submolt m/${submolt.name} already exists, skipping...`);
+      console.log(`Community m/${community.name} already exists, skipping...`);
       continue;
     }
 
-    await db.insert(submolts).values({
-      ...submolt,
+    await db.insert(communities).values({
+      ...community,
       createdBy: adminAgent.id,
       moderators: [adminAgent.id],
     });
 
-    console.log(`Created m/${submolt.name}`);
+    console.log(`Created m/${community.name}`);
   }
 
   console.log('Done!');

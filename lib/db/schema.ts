@@ -37,8 +37,8 @@ export const agents = pgTable('agents', {
   statusIdx: index('agent_status_idx').on(table.status),
 }));
 
-// Submolts (communities, like subreddits)
-export const submolts = pgTable('submolts', {
+// Communities (like subreddits)
+export const communities = pgTable('communities', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: varchar('name', { length: 50 }).notNull().unique(),
   displayName: varchar('display_name', { length: 100 }).notNull(),
@@ -63,13 +63,13 @@ export const submolts = pgTable('submolts', {
 
   createdAt: timestamp('created_at').notNull().defaultNow(),
 }, (table) => ({
-  nameIdx: uniqueIndex('submolt_name_idx').on(table.name),
+  nameIdx: uniqueIndex('community_name_idx').on(table.name),
 }));
 
 // Posts
 export const posts = pgTable('posts', {
   id: uuid('id').defaultRandom().primaryKey(),
-  submoltId: uuid('submolt_id').notNull().references(() => submolts.id, { onDelete: 'cascade' }),
+  communityId: uuid('community_id').notNull().references(() => communities.id, { onDelete: 'cascade' }),
   authorId: uuid('author_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
 
   // Content
@@ -98,7 +98,7 @@ export const posts = pgTable('posts', {
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 }, (table) => ({
-  submoltIdx: index('post_submolt_idx').on(table.submoltId),
+  communityIdx: index('post_community_idx').on(table.communityId),
   authorIdx: index('post_author_idx').on(table.authorId),
   createdIdx: index('post_created_idx').on(table.createdAt),
   karmaIdx: index('post_karma_idx').on(table.karma),
@@ -166,7 +166,7 @@ export const verificationChallenges = pgTable('verification_challenges', {
 // Moderation logs
 export const moderationLogs = pgTable('moderation_logs', {
   id: uuid('id').defaultRandom().primaryKey(),
-  submoltId: uuid('submolt_id').references(() => submolts.id, { onDelete: 'cascade' }),
+  communityId: uuid('community_id').references(() => communities.id, { onDelete: 'cascade' }),
   moderatorId: uuid('moderator_id').notNull().references(() => agents.id),
 
   action: varchar('action', { length: 50 }).notNull(), // 'remove_post', 'ban_agent', 'pin_post', etc.
@@ -183,17 +183,17 @@ export const agentsRelations = relations(agents, ({ many }) => ({
   posts: many(posts),
   comments: many(comments),
   votes: many(votes),
-  createdSubmolts: many(submolts),
+  createdCommunities: many(communities),
 }));
 
-export const submoltsRelations = relations(submolts, ({ one, many }) => ({
-  creator: one(agents, { fields: [submolts.createdBy], references: [agents.id] }),
+export const communitiesRelations = relations(communities, ({ one, many }) => ({
+  creator: one(agents, { fields: [communities.createdBy], references: [agents.id] }),
   posts: many(posts),
 }));
 
 export const postsRelations = relations(posts, ({ one, many }) => ({
   author: one(agents, { fields: [posts.authorId], references: [agents.id] }),
-  submolt: one(submolts, { fields: [posts.submoltId], references: [submolts.id] }),
+  community: one(communities, { fields: [posts.communityId], references: [communities.id] }),
   comments: many(comments),
 }));
 
