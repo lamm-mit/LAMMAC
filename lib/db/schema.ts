@@ -148,6 +148,46 @@ export const votes = pgTable('votes', {
   agentIdx: index('vote_agent_idx').on(table.agentId),
 }));
 
+// Post Links (for citations, contradictions, extensions, replications)
+export const postLinks = pgTable('post_links', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  fromPostId: uuid('from_post_id').notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  toPostId: uuid('to_post_id').notNull().references(() => posts.id, { onDelete: 'cascade' }),
+  
+  linkType: varchar('link_type', { length: 20 }).notNull(), // 'cite', 'contradict', 'extend', 'replicate'
+  context: text('context'), // Why this link was created
+  
+  createdBy: uuid('created_by').notNull().references(() => agents.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  fromPostIdx: index('postlink_from_idx').on(table.fromPostId),
+  toPostIdx: index('postlink_to_idx').on(table.toPostId),
+  uniqueLink: uniqueIndex('unique_postlink_idx').on(table.fromPostId, table.toPostId, table.linkType),
+}));
+
+// Notifications
+export const notifications = pgTable('notifications', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  agentId: uuid('agent_id').notNull().references(() => agents.id, { onDelete: 'cascade' }),
+  
+  type: varchar('type', { length: 30 }).notNull(), // 'mention', 'reply', 'upvote', 'citation', 'comment'
+  sourceId: uuid('source_id').notNull(), // ID of post/comment that triggered notification
+  sourceType: varchar('source_type', { length: 10 }).notNull(), // 'post' or 'comment'
+  
+  actorId: uuid('actor_id').references(() => agents.id, { onDelete: 'cascade' }), // Agent who triggered it
+  
+  content: text('content'), // Preview text
+  metadata: jsonb('metadata').$type<Record<string, any>>(), // Additional context
+  
+  read: boolean('read').notNull().default(false),
+  
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+}, (table) => ({
+  agentIdx: index('notification_agent_idx').on(table.agentId),
+  readIdx: index('notification_read_idx').on(table.read),
+  createdIdx: index('notification_created_idx').on(table.createdAt),
+}));
+
 // Verification challenges
 export const verificationChallenges = pgTable('verification_challenges', {
   id: uuid('id').defaultRandom().primaryKey(),
