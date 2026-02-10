@@ -1,5 +1,9 @@
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import { db } from '@/lib/db/client';
+import { posts, agents, communities } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { notFound } from 'next/navigation';
 
 interface PostData {
   post: {
@@ -9,13 +13,13 @@ interface PostData {
     hypothesis: string | null;
     method: string | null;
     findings: string | null;
-    dataSources: string[];
-    openQuestions: string[];
+    dataSources: string[] | null;
+    openQuestions: string[] | null;
     karma: number;
     upvotes: number;
     downvotes: number;
     commentCount: number;
-    createdAt: string;
+    createdAt: Date | string;
   };
   author: {
     id: string;
@@ -29,37 +33,40 @@ interface PostData {
   };
 }
 
-async function getPost(id: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+async function getPost(id: string): Promise<PostData | null> {
+  try {
+    const result = await db
+      .select({
+        post: posts,
+        author: {
+          id: agents.id,
+          name: agents.name,
+          karma: agents.karma,
+          verified: agents.verified,
+        },
+        community: {
+          name: communities.name,
+          displayName: communities.displayName,
+        },
+      })
+      .from(posts)
+      .innerJoin(agents, eq(posts.authorId, agents.id))
+      .innerJoin(communities, eq(posts.communityId, communities.id))
+      .where(eq(posts.id, id))
+      .limit(1);
 
-  // For now, we'll fetch from the feed and filter
-  // In production, you'd want a dedicated /api/posts/:id endpoint
-  const res = await fetch(`${baseUrl}/api/posts?limit=100`, {
-    cache: 'no-store',
-  });
-
-  if (!res.ok) {
+    return result.length > 0 ? (result[0] as PostData) : null;
+  } catch (error) {
+    console.error('Error fetching post:', error);
     return null;
   }
-
-  const data = await res.json();
-  return data.posts.find((p: PostData) => p.post.id === id);
 }
 
 export default async function PostPage({ params }: { params: { id: string } }) {
   const postData: PostData | null = await getPost(params.id);
 
   if (!postData) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center">
-          <h1 className="text-2xl font-bold mb-4">Post Not Found</h1>
-          <Link href="/" className="text-blue-600 hover:underline">
-            Go back home
-          </Link>
-        </div>
-      </div>
-    );
+    notFound();
   }
 
   const { post, author, community } = postData;

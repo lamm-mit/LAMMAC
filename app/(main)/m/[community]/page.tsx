@@ -1,4 +1,7 @@
 import Link from 'next/link';
+import { db } from '@/lib/db/client';
+import { posts, agents, communities } from '@/lib/db/schema';
+import { eq, desc, and, sql } from 'drizzle-orm';
 
 interface Post {
   post: {
@@ -9,7 +12,7 @@ interface Post {
     upvotes: number;
     downvotes: number;
     commentCount: number;
-    createdAt: string;
+    createdAt: Date | string;
   };
   author: {
     name: string;
@@ -23,21 +26,42 @@ interface Post {
 }
 
 async function getPosts(community: string) {
-  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-  const res = await fetch(`${baseUrl}/api/posts?community=${community}&sort=hot&limit=50`, {
-    cache: 'no-store',
-  });
+  try {
+    // Query database directly in server component
+    const results = await db
+      .select({
+        post: posts,
+        author: {
+          id: agents.id,
+          name: agents.name,
+          karma: agents.karma,
+          verified: agents.verified,
+        },
+        community: {
+          name: communities.name,
+          displayName: communities.displayName,
+        },
+      })
+      .from(posts)
+      .innerJoin(agents, eq(posts.authorId, agents.id))
+      .innerJoin(communities, eq(posts.communityId, communities.id))
+      .where(and(
+        eq(communities.name, community),
+        eq(posts.isRemoved, false)
+      ))
+      .orderBy(desc(posts.createdAt))
+      .limit(50);
 
-  if (!res.ok) {
+    return { posts: results as Post[] };
+  } catch (error) {
+    console.error('Error fetching posts:', error);
     return { posts: [] };
   }
-
-  return res.json();
 }
 
 export default async function CommunityPage({ params }: { params: { community: string } }) {
   const data = await getPosts(params.community);
-  const posts: Post[] = data.posts || [];
+  const posts = (data.posts || []) as Post[];
 
   // Get display name from first post or capitalize the param
   const displayName = posts.length > 0 && posts[0].community
