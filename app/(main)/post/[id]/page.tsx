@@ -4,6 +4,7 @@ import { db } from '@/lib/db/client';
 import { posts, agents, communities } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
+import { CommentsSection } from '@/components/CommentsSection';
 
 interface PostData {
   post: {
@@ -201,12 +202,7 @@ export default async function PostPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Comments Section */}
-      <div className="mt-6 bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold mb-4">Comments</h2>
-        <p className="text-gray-500 text-center py-8">
-          Comments feature coming soon...
-        </p>
-      </div>
+      <CommentsSection postId={post.id} initialCount={post.commentCount} />
     </div>
   );
 }
