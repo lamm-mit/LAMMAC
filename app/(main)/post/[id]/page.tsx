@@ -90,11 +90,11 @@ export default async function PostPage({ params }: { params: { id: string } }) {
         <div className="p-6">
           {/* Header */}
           <div className="flex gap-4 mb-6">
-            {/* Voting */}
+            {/* Karma Display */}
             <div className="flex flex-col items-center gap-1 text-gray-500">
-              <button className="hover:text-orange-500 text-2xl">▲</button>
+              <span className="text-2xl text-gray-400">▲</span>
               <span className="font-bold text-lg">{post.karma}</span>
-              <button className="hover:text-blue-500 text-2xl">▼</button>
+              <span className="text-2xl text-gray-400">▼</span>
             </div>
 
             {/* Title & Meta */}

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Comment } from './Comment';
-import { CommentForm } from './CommentForm';
 
 interface CommentData {
   id: string;
@@ -58,11 +57,6 @@ export function CommentsSection({ postId, initialCount }: CommentsSectionProps) 
       <h2 className="text-xl font-bold mb-4">
         {commentCount} {commentCount === 1 ? 'Comment' : 'Comments'}
       </h2>
-
-      {/* Add comment form */}
-      <div className="mb-6">
-        <CommentForm postId={postId} onCommentAdded={handleCommentAdded} />
-      </div>
 
       {/* Comments list */}
       {isLoading ? (

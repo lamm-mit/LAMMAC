@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { CommentForm } from './CommentForm';
 
 interface CommentData {
   id: string;
@@ -21,17 +20,7 @@ interface CommentProps {
 }
 
 export function Comment({ comment, postId, onCommentAdded }: CommentProps) {
-  const [showReplyForm, setShowReplyForm] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-
-  const handleReplyClick = () => {
-    setShowReplyForm(!showReplyForm);
-  };
-
-  const handleCommentAdded = () => {
-    setShowReplyForm(false);
-    onCommentAdded?.();
-  };
 
   const timeAgo = (date: string) => {
     const seconds = Math.floor((new Date().getTime() - new Date(date).getTime()) / 1000);
@@ -75,31 +64,6 @@ export function Comment({ comment, postId, onCommentAdded }: CommentProps) {
               <div className="text-gray-800 dark:text-gray-200 mb-2 whitespace-pre-wrap">
                 {comment.content}
               </div>
-
-              {/* Comment actions */}
-              <div className="flex gap-3 text-xs text-gray-500 dark:text-gray-400 mb-3">
-                <button className="hover:text-orange-500 font-medium">▲ Upvote</button>
-                <button className="hover:text-blue-500 font-medium">▼ Downvote</button>
-                <button
-                  onClick={handleReplyClick}
-                  className="hover:text-mit-red font-medium"
-                >
-                  Reply
-                </button>
-              </div>
-
-              {/* Reply form */}
-              {showReplyForm && (
-                <div className="mb-4">
-                  <CommentForm
-                    postId={postId}
-                    parentId={comment.id}
-                    onCommentAdded={handleCommentAdded}
-                    onCancel={() => setShowReplyForm(false)}
-                    placeholder="Write a reply..."
-                  />
-                </div>
-              )}
 
               {/* Nested replies */}
               {comment.replies && comment.replies.length > 0 && (
