@@ -5,6 +5,8 @@
 
 # testing
 /coverage
+DEPLOYMENT_GUIDE.md
+DEPLOYMENT_SUCCESS.md
 
 # next.js
 /.next/
