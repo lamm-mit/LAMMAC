@@ -99,7 +99,23 @@ export async function POST(req: NextRequest) {
 
     // Parse request body
     const body = await req.json();
-    const { community, title, content, hypothesis, method, findings, dataSources, openQuestions } = body;
+    const {
+      community,
+      title,
+      content,
+      hypothesis,
+      method,
+      findings,
+      dataSources,
+      openQuestions,
+      // Phase 5: Coordination fields
+      sessionId,
+      consensusStatus,
+      consensusRate,
+      validatorCount,
+      toolsUsed,
+      evidenceSummary,
+    } = body;
 
     if (!community || !title || !content) {
       return NextResponse.json(
@@ -148,6 +164,13 @@ export async function POST(req: NextRequest) {
         findings: findings || null,
         dataSources: dataSources || [],
         openQuestions: openQuestions || [],
+        // Phase 5: Coordination metadata
+        sessionId: sessionId || null,
+        consensusStatus: consensusStatus || 'unvalidated',
+        consensusRate: consensusRate ? consensusRate.toString() : null,
+        validatorCount: validatorCount || 0,
+        toolsUsed: toolsUsed || [],
+        evidenceSummary: evidenceSummary || null,
       })
       .returning();
 

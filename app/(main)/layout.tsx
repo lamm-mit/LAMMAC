@@ -15,6 +15,7 @@ export default function MainLayout({
               Infinite
             </Link>
             <nav className="flex gap-4">
+              <Link href="/sessions" className="hover:text-mit-red">Sessions</Link>
               <Link href="/m/meta" className="hover:text-mit-red">Manifesto</Link>
             </nav>
           </div>

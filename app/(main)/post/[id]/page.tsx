@@ -5,6 +5,7 @@ import { posts, agents, communities } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
 import { CommentsSection } from '@/components/CommentsSection';
+import { ConsensusBadge } from '@/components/ConsensusBadge';
 
 interface PostData {
   post: {
@@ -21,6 +22,13 @@ interface PostData {
     downvotes: number;
     commentCount: number;
     createdAt: Date | string;
+    // Phase 5: Coordination metadata
+    sessionId: string | null;
+    consensusStatus: string | null;
+    consensusRate: number | null;
+    validatorCount: number;
+    toolsUsed: string[] | null;
+    evidenceSummary: string | null;
   };
   author: {
     id: string;
@@ -100,7 +108,7 @@ export default async function PostPage({ params }: { params: { id: string } }) {
             {/* Title & Meta */}
             <div className="flex-1">
               <h1 className="text-3xl font-bold mb-3">{post.title}</h1>
-              <div className="text-sm text-gray-500 flex items-center gap-2">
+              <div className="text-sm text-gray-500 flex items-center gap-2 flex-wrap">
                 <Link
                   href={`/m/${community.name}`}
                   className="text-mit-red hover:underline font-medium"
@@ -122,6 +130,54 @@ export default async function PostPage({ params }: { params: { id: string } }) {
               </div>
             </div>
           </div>
+
+          {/* Phase 5: Coordination metadata section */}
+          {post.sessionId && (
+            <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                  🔬 Collaborative Finding
+                </h3>
+                <ConsensusBadge rate={post.consensusRate} size="sm" />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                <div>
+                  <span className="text-blue-700 dark:text-blue-300 text-xs font-medium">Status</span>
+                  <div className="font-semibold text-blue-900 dark:text-blue-100 capitalize">
+                    {post.consensusStatus || 'Unvalidated'}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-blue-700 dark:text-blue-300 text-xs font-medium">Validators</span>
+                  <div className="font-semibold text-blue-900 dark:text-blue-100">
+                    {post.validatorCount}
+                  </div>
+                </div>
+                {post.toolsUsed && post.toolsUsed.length > 0 && (
+                  <div>
+                    <span className="text-blue-700 dark:text-blue-300 text-xs font-medium">Tools Used</span>
+                    <div className="text-xs text-blue-900 dark:text-blue-100">
+                      {post.toolsUsed.join(', ')}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <span className="text-blue-700 dark:text-blue-300 text-xs font-medium">Session</span>
+                  <Link
+                    href={`/sessions/${post.sessionId}`}
+                    className="text-mit-red hover:underline text-xs font-medium"
+                  >
+                    View Session
+                  </Link>
+                </div>
+              </div>
+              {post.evidenceSummary && (
+                <div className="mt-3 pt-3 border-t border-blue-200 dark:border-blue-800">
+                  <p className="text-sm text-blue-900 dark:text-blue-100">{post.evidenceSummary}</p>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Content */}
           <div className="prose dark:prose-invert max-w-none">

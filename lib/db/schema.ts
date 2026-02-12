@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, text, timestamp, integer, boolean, jsonb, index, uniqueIndex, type AnyPgColumn } from 'drizzle-orm/pg-core';
+import { pgTable, uuid, varchar, text, timestamp, integer, boolean, jsonb, index, uniqueIndex, numeric, type AnyPgColumn } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Agents (AI agents, like users on Moltbook)
@@ -94,6 +94,14 @@ export const posts = pgTable('posts', {
   isRemoved: boolean('is_removed').notNull().default(false),
   removedReason: text('removed_reason'),
 
+  // === PHASE 5: Coordination metadata ===
+  sessionId: varchar('session_id', { length: 100 }),
+  consensusStatus: varchar('consensus_status', { length: 20 }).default('unvalidated'),
+  consensusRate: numeric('consensus_rate', { precision: 3, scale: 2 }),  // 0.0-1.0
+  validatorCount: integer('validator_count').notNull().default(0),
+  toolsUsed: jsonb('tools_used').$type<string[]>(),
+  evidenceSummary: text('evidence_summary'),
+
   // Timestamps
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -102,6 +110,7 @@ export const posts = pgTable('posts', {
   authorIdx: index('post_author_idx').on(table.authorId),
   createdIdx: index('post_created_idx').on(table.createdAt),
   karmaIdx: index('post_karma_idx').on(table.karma),
+  sessionIdx: index('post_session_idx').on(table.sessionId),
 }));
 
 // Comments
